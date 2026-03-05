@@ -6,81 +6,81 @@
 
 <style>
 body{
-    background:#1e1e1e;
-    color:white;
-    font-family:Arial;
-    text-align:center;
-    margin:0;
-    padding:0;
+  background:#1e1e1e;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+  margin:0;
+  padding:0;
 }
 
 h2{
-    padding:15px;
-    margin:0;
-    background:#111;
+  padding:15px;
+  margin:0;
+  background:#111;
 }
 
 #chat{
-    width:90%;
-    max-width:700px;
-    height:420px;
-    margin:20px auto;
-    background:#111;
-    border:1px solid #333;
-    overflow-y:auto;
-    padding:15px;
-    text-align:left;
-    border-radius:10px;
+  width:90%;
+  max-width:700px;
+  height:420px;
+  margin:20px auto;
+  background:#111;
+  border:1px solid #333;
+  overflow-y:auto;
+  padding:15px;
+  text-align:left;
+  border-radius:10px;
 }
 
 .mesaj{
-    margin:10px 0;
-    padding:8px;
-    background:#222;
-    border-radius:8px;
-    word-wrap:break-word;
+  margin:10px 0;
+  padding:8px;
+  background:#222;
+  border-radius:8px;
+  word-wrap:break-word;
 }
 
 .mesaj b{
-    color:#4da6ff;
+  color:#4da6ff;
 }
 
 img{
-    max-width:200px;
-    border-radius:8px;
-    margin-top:5px;
-    display:block;
+  max-width:200px;
+  border-radius:8px;
+  margin-top:5px;
+  display:block;
 }
 
 input{
-    width:65%;
-    padding:10px;
-    font-size:16px;
-    border-radius:8px;
-    border:none;
+  width:65%;
+  padding:10px;
+  font-size:16px;
+  border-radius:8px;
+  border:none;
 }
 
 button{
-    padding:8px 12px;
-    font-size:14px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
+  padding:8px 12px;
+  font-size:14px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
 }
 
 .gonderBtn{
-    background:#4da6ff;
-    color:white;
+  background:#4da6ff;
+  color:white;
 }
 
 .silBtn{
-    background:#aa3333;
-    color:white;
-    margin-left:8px;
+  background:#aa3333;
+  color:white;
+  margin-left:8px;
 }
 
 .silBtn:hover{
-    background:#ff4444;
+  background:#ff4444;
 }
 </style>
 </head>
@@ -97,83 +97,92 @@ button{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-const SUPABASE_URL = "BURAYA_URL";
-const SUPABASE_ANON_KEY = "BURAYA_ANON_PUBLIC_KEY";
+const SUPABASE_URL = "pqplprtztvamamzidyqa";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
 
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let isim = prompt("Adın nedir?");
-if(!isim) isim = "Misafir";
+let isim; // global
+let chat, input;
 
-const input = document.getElementById("mesaj");
-const chat = document.getElementById("chat");
+document.addEventListener("DOMContentLoaded", async () => {
 
-input.addEventListener("keypress", function(e){
+  // Kullanıcıdan isim al
+  isim = prompt("Adın nedir?");
+  if(!isim) isim = "Misafir";
+
+  input = document.getElementById("mesaj");
+  chat = document.getElementById("chat");
+
+  // Enter tuşu ile gönderme
+  input.addEventListener("keypress", function(e){
     if(e.key==="Enter") gonder();
+  });
+
+  // Mesajları yükle
+  await mesajlariYukle();
 });
 
-// Mesaj gönder
+// Mesaj gönderme fonksiyonu
 async function gonder(){
-    const mesaj = input.value.trim();
-    if(!mesaj) return;
+  let mesaj = input.value.trim();
+  if(!mesaj) return;
 
-    await supabase.from("mesajlar").insert([{ isim, mesaj }]);
-    input.value="";
-    await mesajlariYukle();
+  await supabase.from("mesajlar").insert([{ isim, mesaj }]);
+  input.value="";
+  await mesajlariYukle();
 }
 
-// Mesajları yükle
+// Mesajları listeleme
 async function mesajlariYukle(){
-    chat.innerHTML="";
+  chat.innerHTML="";
 
-    const { data, error } = await supabase
-        .from("mesajlar")
-        .select("*")
-        .order("created_at", { ascending: true });
+  let { data, error } = await supabase
+    .from("mesajlar")
+    .select("*")
+    .order("created_at", { ascending: true });
 
-    if(error){
-        console.log(error);
-        return;
+  if(error){
+    console.log(error);
+    return;
+  }
+
+  data.forEach(m => {
+    let div = document.createElement("div");
+    div.className="mesaj";
+
+    let html = "<b>"+m.isim+":</b> ";
+
+    // Resim linklerini göster
+    if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)){
+      html += "<img src='"+m.mesaj+"'>";
+    } 
+    // Diğer linkleri tıklanabilir yap
+    else if(m.mesaj.startsWith("http")){
+      html += "<a href='"+m.mesaj+"' target='_blank' style='color:#4da6ff'>"+m.mesaj+"</a>";
+    } 
+    else{
+      html += m.mesaj;
     }
 
-    data.forEach(m => {
-        const div = document.createElement("div");
-        div.className = "mesaj";
+    // Kendi mesajını silme butonu ekle
+    if(m.isim === isim){
+      html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
+    }
 
-        let html = `<b>${m.isim}:</b> `;
+    div.innerHTML = html;
+    chat.appendChild(div);
+  });
 
-        if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)){
-            html += `<img src="${m.mesaj}">`;
-        }
-        else if(m.mesaj.startsWith("http")){
-            html += `<a href="${m.mesaj}" target="_blank" style="color:#4da6ff">${m.mesaj}</a>`;
-        }
-        else{
-            html += m.mesaj;
-        }
-
-        if(m.isim === isim){
-            html += ` <button class="silBtn" onclick="sil(${m.id})">❌</button>`;
-        }
-
-        div.innerHTML = html;
-        chat.appendChild(div);
-    });
-
-    chat.scrollTop = chat.scrollHeight;
+  // Scroll en alta
+  chat.scrollTop = chat.scrollHeight;
 }
 
-// Mesaj sil
+// Mesaj silme
 async function sil(id){
-    await supabase.from("mesajlar").delete().eq("id", id);
-    await mesajlariYukle();
+  await supabase.from("mesajlar").delete().eq("id", id);
+  await mesajlariYukle();
 }
-
-// Sayfa açılınca mesajları yükle
-mesajlariYukle();
-
-window.gonder = gonder;
-window.sil = sil;
 </script>
 
 </body>

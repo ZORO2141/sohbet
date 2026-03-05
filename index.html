@@ -32,7 +32,7 @@ button{padding:8px 12px;font-size:14px;border:none;border-radius:8px;cursor:poin
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// 🔹 Supabase bağlantısı
+// 🔹 Supabase Bağlantısı (tek tanım)
 const SUPABASE_URL = "https://pqplprtztvamamzidyqa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
 
@@ -60,37 +60,42 @@ function gonder() {
   const mesaj = input.value.trim();
   if(!mesaj) return;
 
-  supabase.from("mesajlar").insert([{ isim, mesaj }]).then(() => {
-    input.value="";
-    mesajlariYukle();
-  }).catch(err => console.log(err));
+  supabase.from("mesajlar").insert([{ isim, mesaj }])
+    .then(() => {
+      input.value="";
+      mesajlariYukle();
+    })
+    .catch(err => console.log(err));
 }
 
 // 🔹 Mesajları yükleme (global)
 function mesajlariYukle() {
   chat.innerHTML = "";
-  supabase.from("mesajlar").select("*").order("created_at",{ascending:true}).then(({ data, error }) => {
-    if(error){ console.log(error); return; }
+  supabase.from("mesajlar").select("*").order("created_at",{ascending:true})
+    .then(({ data, error }) => {
+      if(error){ console.log(error); return; }
 
-    data.forEach(m=>{
-      const div = document.createElement("div");
-      div.className = "mesaj";
-      let html = "<b>"+m.isim+":</b> ";
-      if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)) html += "<img src='"+m.mesaj+"'>";
-      else if(m.mesaj.startsWith("http")) html += "<a href='"+m.mesaj+"' target='_blank' style='color:#4da6ff'>"+m.mesaj+"</a>";
-      else html += m.mesaj;
+      data.forEach(m=>{
+        const div = document.createElement("div");
+        div.className = "mesaj";
+        let html = "<b>"+m.isim+":</b> ";
+        if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)) html += "<img src='"+m.mesaj+"'>";
+        else if(m.mesaj.startsWith("http")) html += "<a href='"+m.mesaj+"' target='_blank' style='color:#4da6ff'>"+m.mesaj+"</a>";
+        else html += m.mesaj;
 
-      if(m.isim === isim) html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
-      div.innerHTML = html;
-      chat.appendChild(div);
+        if(m.isim === isim) html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
+        div.innerHTML = html;
+        chat.appendChild(div);
+      });
+      chat.scrollTop = chat.scrollHeight;
     });
-    chat.scrollTop = chat.scrollHeight;
-  });
 }
 
 // 🔹 Mesaj silme (global)
 function sil(id) {
-  supabase.from("mesajlar").delete().eq("id", id).then(() => mesajlariYukle()).catch(err => console.log(err));
+  supabase.from("mesajlar").delete().eq("id", id)
+    .then(() => mesajlariYukle())
+    .catch(err => console.log(err));
 }
 </script>
 

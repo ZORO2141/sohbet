@@ -11,22 +11,21 @@ h2{padding:15px;margin:0;background:#111;}
 .mesaj{margin:10px 0;padding:8px;background:#222;border-radius:8px;word-wrap:break-word;position:relative;}
 .mesaj b{color:#4da6ff;}
 img{max-width:200px;border-radius:8px;margin-top:5px;display:block;}
-input{width:65%;padding:10px;font-size:16px;border-radius:8px;border:none;}
+input[type="text"]{width:55%;padding:10px;font-size:16px;border-radius:8px;border:none;}
+input[type="file"]{margin-left:8px;}
 button{padding:8px 12px;font-size:14px;border:none;border-radius:8px;cursor:pointer;}
 .gonderBtn{background:#4da6ff;color:white;}
 .silBtn{ 
   background:#aa3333; 
   color:white; 
   margin-left:8px; 
-  display:none; /* Başlangıçta gizli */ 
+  display:none; 
   position:absolute; 
   right:5px; 
   top:5px; 
   cursor:pointer;
 }
-.mesaj:hover .silBtn { 
-  display:inline-block; /* Hover ile görünür */ 
-}
+.mesaj:hover .silBtn { display:inline-block; }
 a{color:#4da6ff; word-break: break-all;}
 </style>
 </head>
@@ -37,45 +36,58 @@ a{color:#4da6ff; word-break: break-all;}
 
 <div id="chat"></div>
 
-<input id="mesaj" placeholder="Mesaj yaz">
-<button class="gonderBtn" onclick="gonder()">Gönder</button>
+<input type="text" id="mesaj" placeholder="Mesaj yaz">
+<input type="file" id="dosya">
+<button class="gonderBtn" id="gonderBtn">Gönder</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // 🔹 Supabase bağlantısı
 const SUPABASE_URL = "https://pqplprtztvamamzidyqa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
-
-// 🔹 Supabase istemcisini başlat
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
 
-let isim, chat, input;
-let sonMesajId = 0; // Son eklenen mesaj id’si
+let isim, chat, input, dosyaInput;
+let sonMesajId = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
   isim = prompt("Adın nedir?") || "Misafir";
 
   chat = document.getElementById("chat");
   input = document.getElementById("mesaj");
+  dosyaInput = document.getElementById("dosya");
+  const gonderBtn = document.getElementById("gonderBtn");
 
-  input.addEventListener("keypress", e => { if(e.key==="Enter") gonder(); });
+  input.addEventListener("keypress", e => { if(e.key==="Enter") gonderMesaj(); });
+  gonderBtn.addEventListener("click", gonderMesaj);
 
   await mesajlariYukle();
-
   setInterval(mesajlariYukle, 2000);
 });
 
 // 🔹 Mesaj gönderme
-function gonder() {
-  const mesaj = input.value.trim();
+async function gonderMesaj() {
+  let mesaj = input.value.trim();
+  input.value = "";
+
+  // Dosya seçilmişse upload et
+  if(dosyaInput.files.length > 0) {
+    const file = dosyaInput.files[0];
+    dosyaInput.value = "";
+    const fileName = Date.now() + "_" + file.name;
+    const { data, error: uploadError } = await client.storage.from('public').upload(fileName, file);
+    if(uploadError){ console.log(uploadError); return; }
+    const { data: urlData } = client.storage.from('public').getPublicUrl(fileName);
+    mesaj = urlData.publicUrl;
+  }
+
   if(!mesaj) return;
 
   client.from("mesajlar").insert([{ isim, mesaj }])
-    .then(() => input.value="")
     .catch(err => console.log(err));
 }
 
-// 🔹 Mesajları yükleme (sadece yeni mesajlar ekleniyor)
+// 🔹 Mesajları yükleme
 async function mesajlariYukle() {
   const { data, error } = await client.from("mesajlar").select("*").order("id",{ascending:true});
   if(error){ console.log(error); return; }
@@ -89,10 +101,19 @@ async function mesajlariYukle() {
     else if(m.mesaj.startsWith("http")) html += "<a href='"+m.mesaj+"' target='_blank'>"+m.mesaj+"</a>";
     else html += m.mesaj;
 
-    if(m.isim === isim) html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
     div.innerHTML = html;
-    chat.appendChild(div);
 
+    // Silme butonu sadece kendi mesajın için
+    if(m.isim === isim){
+      const silBtn = document.createElement("button");
+      silBtn.className = "silBtn";
+      silBtn.textContent = "❌";
+      silBtn.dataset.id = m.id;
+      silBtn.addEventListener("click", () => silMesaj(m.id, div));
+      div.appendChild(silBtn);
+    }
+
+    chat.appendChild(div);
     sonMesajId = Math.max(sonMesajId, m.id);
   });
 
@@ -100,15 +121,9 @@ async function mesajlariYukle() {
 }
 
 // 🔹 Mesaj silme
-function sil(id) {
+function silMesaj(id, div) {
   client.from("mesajlar").delete().eq("id", id)
-    .then(() => {
-      // Silinen mesaj DOM’dan kaldır
-      const divlar = document.querySelectorAll(".mesaj");
-      divlar.forEach(d => {
-        if(d.innerHTML.includes(`onclick='sil(${id})'`)) d.remove();
-      });
-    })
+    .then(() => { div.remove(); })
     .catch(err => console.log(err));
 }
 </script>

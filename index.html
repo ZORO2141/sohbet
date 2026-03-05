@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Supabase Sohbet</title>
+<title>ZORO Sohbet</title>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <style>
 body{background:#1e1e1e;color:white;font-family:Arial;text-align:center;margin:0;padding:0;}
@@ -27,18 +27,27 @@ button{padding:8px 12px;font-size:14px;border:none;border-radius:8px;cursor:poin
 }
 .mesaj:hover .silBtn { display:inline-block; }
 a{color:#4da6ff; word-break: break-all;}
+#loginContainer{margin-top:50px;}
+#loginContainer input{margin-bottom:10px;}
 </style>
 </head>
 
 <body>
 
-<h2>Supabase Sohbet</h2>
+<h2>ZORO Sohbet</h2>
 
-<div id="chat"></div>
+<div id="loginContainer">
+  <input type="text" id="usernameInput" placeholder="Kullanıcı adını gir" value="ZORO Sohbet">
+  <button id="loginBtn">Giriş Yap</button>
+</div>
 
-<input type="text" id="mesaj" placeholder="Mesaj yaz">
-<input type="file" id="dosya">
-<button class="gonderBtn" id="gonderBtn">Gönder</button>
+<div id="chat" style="display:none;"></div>
+
+<div id="messageContainer" style="display:none;">
+  <input type="text" id="mesaj" placeholder="Mesaj yaz">
+  <input type="file" id="dosya">
+  <button class="gonderBtn" id="gonderBtn">Gönder</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -51,9 +60,16 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { 
 let isim, chat, input, dosyaInput;
 let sonMesajId = 0;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  isim = prompt("Adın nedir?") || "Misafir";
+// Giriş
+document.getElementById("loginBtn").addEventListener("click", () => {
+  isim = document.getElementById("usernameInput").value.trim() || "ZORO Sohbet";
+  document.getElementById("loginContainer").style.display = "none";
+  document.getElementById("chat").style.display = "block";
+  document.getElementById("messageContainer").style.display = "block";
+  initChat();
+});
 
+function initChat(){
   chat = document.getElementById("chat");
   input = document.getElementById("mesaj");
   dosyaInput = document.getElementById("dosya");
@@ -62,35 +78,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   input.addEventListener("keypress", e => { if(e.key==="Enter") gonderMesaj(); });
   gonderBtn.addEventListener("click", gonderMesaj);
 
-  await mesajlariYukle();
+  mesajlariYukle();
   setInterval(mesajlariYukle, 2000);
-});
+}
 
-// 🔹 Mesaj gönderme
+// Mesaj gönderme
 async function gonderMesaj() {
   let mesaj = input.value.trim();
   input.value = "";
 
-  // Dosya seçilmişse upload et
   if(dosyaInput.files.length > 0) {
     const file = dosyaInput.files[0];
     dosyaInput.value = "";
     const fileName = `${Date.now()}_${file.name}`;
     
-    // Upload
     const { data: uploadData, error: uploadError } = await client
       .storage
       .from('chat-files')
-      .upload(fileName, file);
-    
+      .upload(fileName, file, { cacheControl:'3600', upsert:true });
     if(uploadError){ console.log(uploadError); return; }
 
-    // Public URL al
     const { data: urlData } = client
       .storage
       .from('chat-files')
       .getPublicUrl(fileName);
-
     mesaj = urlData.publicUrl;
   }
 
@@ -98,12 +109,10 @@ async function gonderMesaj() {
 
   try {
     await client.from("mesajlar").insert([{ isim, mesaj }]);
-  } catch(err) {
-    console.log(err);
-  }
+  } catch(err) { console.log(err); }
 }
 
-// 🔹 Mesajları yükleme
+// Mesajları yükleme
 async function mesajlariYukle() {
   const { data, error } = await client.from("mesajlar").select("*").order("id",{ascending:true});
   if(error){ console.log(error); return; }
@@ -135,7 +144,7 @@ async function mesajlariYukle() {
   if(yeniMesajlar.length > 0) chat.scrollTop = chat.scrollHeight;
 }
 
-// 🔹 Mesaj silme
+// Mesaj silme
 function silMesaj(id, div) {
   client.from("mesajlar").delete().eq("id", id)
     .then(() => { div.remove(); })

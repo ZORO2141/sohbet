@@ -2,86 +2,20 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Sohbet</title>
+<title>Supabase Sohbet</title>
 
 <style>
-body{
-  background:#1e1e1e;
-  color:white;
-  font-family:Arial;
-  text-align:center;
-  margin:0;
-  padding:0;
-}
-
-h2{
-  padding:15px;
-  margin:0;
-  background:#111;
-}
-
-#chat{
-  width:90%;
-  max-width:700px;
-  height:420px;
-  margin:20px auto;
-  background:#111;
-  border:1px solid #333;
-  overflow-y:auto;
-  padding:15px;
-  text-align:left;
-  border-radius:10px;
-}
-
-.mesaj{
-  margin:10px 0;
-  padding:8px;
-  background:#222;
-  border-radius:8px;
-  word-wrap:break-word;
-}
-
-.mesaj b{
-  color:#4da6ff;
-}
-
-img{
-  max-width:200px;
-  border-radius:8px;
-  margin-top:5px;
-  display:block;
-}
-
-input{
-  width:65%;
-  padding:10px;
-  font-size:16px;
-  border-radius:8px;
-  border:none;
-}
-
-button{
-  padding:8px 12px;
-  font-size:14px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-.gonderBtn{
-  background:#4da6ff;
-  color:white;
-}
-
-.silBtn{
-  background:#aa3333;
-  color:white;
-  margin-left:8px;
-}
-
-.silBtn:hover{
-  background:#ff4444;
-}
+body{background:#1e1e1e;color:white;font-family:Arial;text-align:center;margin:0;padding:0;}
+h2{padding:15px;margin:0;background:#111;}
+#chat{width:90%;max-width:700px;height:420px;margin:20px auto;background:#111;border:1px solid #333;overflow-y:auto;padding:15px;text-align:left;border-radius:10px;}
+.mesaj{margin:10px 0;padding:8px;background:#222;border-radius:8px;word-wrap:break-word;}
+.mesaj b{color:#4da6ff;}
+img{max-width:200px;border-radius:8px;margin-top:5px;display:block;}
+input{width:65%;padding:10px;font-size:16px;border-radius:8px;border:none;}
+button{padding:8px 12px;font-size:14px;border:none;border-radius:8px;cursor:pointer;}
+.gonderBtn{background:#4da6ff;color:white;}
+.silBtn{background:#aa3333;color:white;margin-left:8px;}
+.silBtn:hover{background:#ff4444;}
 </style>
 </head>
 
@@ -97,33 +31,36 @@ button{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+// 🔹 Supabase Bağlantısı
 const SUPABASE_URL = "https://pqplprtztvamamzidyqa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
 
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let isim; // global
-let chat, input;
+// 🔹 Global değişkenler
+let isim, chat, input;
 
+// 🔹 Sayfa yüklendiğinde
 document.addEventListener("DOMContentLoaded", async () => {
 
   // Kullanıcıdan isim al
   isim = prompt("Adın nedir?");
   if(!isim) isim = "Misafir";
 
-  input = document.getElementById("mesaj");
   chat = document.getElementById("chat");
+  input = document.getElementById("mesaj");
 
-  // Enter tuşu ile gönderme
-  input.addEventListener("keypress", function(e){
-    if(e.key==="Enter") gonder();
-  });
+  // Enter tuşu ile mesaj gönder
+  input.addEventListener("keypress", e => { if(e.key==="Enter") gonder(); });
 
   // Mesajları yükle
   await mesajlariYukle();
+
+  // Her 2 saniyede güncelle
+  setInterval(mesajlariYukle, 2000);
 });
 
-// Mesaj gönderme fonksiyonu
+// 🔹 Mesaj gönder
 async function gonder(){
   let mesaj = input.value.trim();
   if(!mesaj) return;
@@ -133,19 +70,16 @@ async function gonder(){
   await mesajlariYukle();
 }
 
-// Mesajları listeleme
+// 🔹 Mesajları yükle
 async function mesajlariYukle(){
   chat.innerHTML="";
 
   let { data, error } = await supabase
     .from("mesajlar")
     .select("*")
-    .order("created_at", { ascending: true });
+    .order("created_at",{ascending:true});
 
-  if(error){
-    console.log(error);
-    return;
-  }
+  if(error){ console.log(error); return; }
 
   data.forEach(m => {
     let div = document.createElement("div");
@@ -153,20 +87,15 @@ async function mesajlariYukle(){
 
     let html = "<b>"+m.isim+":</b> ";
 
-    // Resim linklerini göster
     if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)){
       html += "<img src='"+m.mesaj+"'>";
-    } 
-    // Diğer linkleri tıklanabilir yap
-    else if(m.mesaj.startsWith("http")){
+    } else if(m.mesaj.startsWith("http")){
       html += "<a href='"+m.mesaj+"' target='_blank' style='color:#4da6ff'>"+m.mesaj+"</a>";
-    } 
-    else{
+    } else{
       html += m.mesaj;
     }
 
-    // Kendi mesajını silme butonu ekle
-    if(m.isim === isim){
+    if(m.isim===isim){
       html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
     }
 
@@ -174,11 +103,10 @@ async function mesajlariYukle(){
     chat.appendChild(div);
   });
 
-  // Scroll en alta
   chat.scrollTop = chat.scrollHeight;
 }
 
-// Mesaj silme
+// 🔹 Mesaj sil
 async function sil(id){
   await supabase.from("mesajlar").delete().eq("id", id);
   await mesajlariYukle();
@@ -187,5 +115,3 @@ async function sil(id){
 
 </body>
 </html>
-
-

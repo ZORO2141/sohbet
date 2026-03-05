@@ -16,6 +16,8 @@ button:hover{background:#3399ff;}
 img{max-width:200px;border-radius:8px;display:block;margin-top:5px;}
 .silBtn{background:#aa3333;color:white;position:absolute;right:5px;top:5px;display:none;}
 .mesaj:hover .silBtn{display:inline-block;}
+#emojiPanel{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
+#emojiPanel span{cursor:pointer;font-size:20px;}
 </style>
 </head>
 <body>
@@ -25,50 +27,61 @@ img{max-width:200px;border-radius:8px;display:block;margin-top:5px;}
 <div id="loginContainer">
   <input type="text" id="usernameInput" placeholder="Kullanıcı adı">
   <input type="password" id="passwordInput" placeholder="Şifre">
-  <button id="registerBtn">Kayıt Ol</button>
-  <button id="loginBtn">Giriş Yap</button>
+  <div style="display:flex;gap:5px;">
+    <button id="registerBtn">Kayıt Ol</button>
+    <button id="loginBtn">Giriş Yap</button>
+  </div>
 </div>
 
 <div id="chat" style="display:none"></div>
 
 <div id="messageContainer" style="display:none;flex-direction:column;">
   <input type="text" id="mesaj" placeholder="Mesaj yaz">
+  <div id="emojiPanel"></div>
   <input type="file" id="dosya">
   <button id="gonderBtn">Gönder</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://pqplprtztvamamzidyqa.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
-
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Supabase client (tek seferde tanımla)
+const client = supabase.createClient(
+  "https://pqplprtztvamamzidyqa.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8"
+);
 
 let isim, sifre, sonMesajId = 0;
 
-// KAYIT
-document.getElementById("registerBtn").addEventListener("click", async () => {
-  const i = document.getElementById("usernameInput").value.trim();
-  const s = document.getElementById("passwordInput").value;
-  if(!i || !s){ alert("Boş bırakma!"); return; }
+// Basit emoji listesi
+const emojis = ["😀","😂","😍","😎","😢","👍","👎","❤️","🔥","🎉"];
+const emojiPanel = document.getElementById("emojiPanel");
+emojis.forEach(e=>{
+  const span=document.createElement("span");
+  span.textContent=e;
+  span.onclick=()=>document.getElementById("mesaj").value += e;
+  emojiPanel.appendChild(span);
+});
 
-  const { error } = await supabase.from("kullanicilar").insert([{ isim:i, sifre:s }]);
-  if(error){ alert("Bu kullanıcı adı zaten var!"); }
-  else{ alert("Kayıt başarılı! Giriş yapabilirsin."); }
+// KAYIT
+document.getElementById("registerBtn").addEventListener("click", async ()=>{
+  const i=document.getElementById("usernameInput").value.trim();
+  const s=document.getElementById("passwordInput").value;
+  if(!i||!s){ alert("Kullanıcı adı ve şifre boş olamaz!"); return; }
+
+  const { error } = await client.from("kullanicilar").insert([{ isim:i, sifre:s }]);
+  if(error){ alert("Bu kullanıcı adı zaten var!"); console.log(error); }
+  else{ alert("Kayıt başarılı! Şimdi giriş yapabilirsin."); }
 });
 
 // GİRİŞ
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  const i = document.getElementById("usernameInput").value.trim();
-  const s = document.getElementById("passwordInput").value;
+document.getElementById("loginBtn").addEventListener("click", async ()=>{
+  const i=document.getElementById("usernameInput").value.trim();
+  const s=document.getElementById("passwordInput").value;
 
-  const { data } = await supabase.from("kullanicilar")
-    .select("*").eq("isim",i).eq("sifre",s);
+  const { data } = await client.from("kullanicilar").select("*").eq("isim",i).eq("sifre",s);
+  if(!data || data.length===0){ alert("Yanlış kullanıcı adı veya şifre!"); return; }
 
-  if(!data || data.length === 0){ alert("Yanlış kullanıcı adı veya şifre!"); return; }
-
-  isim = i; sifre = s;
-
+  isim=i; sifre=s;
   document.getElementById("loginContainer").style.display="none";
   document.getElementById("chat").style.display="block";
   document.getElementById("messageContainer").style.display="flex";
@@ -78,57 +91,46 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 // CHAT
 function initChat(){
   document.getElementById("gonderBtn").addEventListener("click", gonderMesaj);
-  document.getElementById("mesaj")
-    .addEventListener("keypress", e => { if(e.key==="Enter") gonderMesaj(); });
+  document.getElementById("mesaj").addEventListener("keypress", e=>{if(e.key==="Enter") gonderMesaj();});
   mesajlariYukle();
   setInterval(mesajlariYukle,2000);
 }
 
 // Mesaj Gönder
 async function gonderMesaj(){
-  let m = document.getElementById("mesaj").value.trim();
-  document.getElementById("mesaj").value = "";
+  let m=document.getElementById("mesaj").value.trim();
+  document.getElementById("mesaj").value="";
   let tur="text";
 
-  if(document.getElementById("dosya").files.length > 0){
-    const f = document.getElementById("dosya").files[0];
-    const name = `${Date.now()}_${f.name.replace(/\s/g,"_")}`;
-    const { error:upErr } = await supabase.storage.from("chat-files").upload(name,f,{upsert:true});
+  if(document.getElementById("dosya").files.length>0){
+    const f=document.getElementById("dosya").files[0];
+    const name=`${Date.now()}_${f.name.replace(/\s/g,"_")}`;
+    const { error:upErr } = await client.storage.from("chat-files").upload(name,f,{upsert:true});
     if(upErr){ console.log(upErr); return; }
-    const { data:url } = supabase.storage.from("chat-files").getPublicUrl(name);
-    m = url.publicUrl; tur="image";
+    const { data:url } = client.storage.from("chat-files").getPublicUrl(name);
+    m=url.publicUrl; tur="image";
   }
-
   if(!m) return;
-  await supabase.from("mesajlar").insert([{ isim, sifre, mesaj:m, tur }]);
+  await client.from("mesajlar").insert([{ isim,sifre,mesaj:m,tur }]);
 }
 
 // Mesaj Yükle
 async function mesajlariYukle(){
-  const { data } = await supabase.from("mesajlar")
-    .select("*").order("id",{ascending:true});
-
-  const chatDiv = document.getElementById("chat");
-  data.filter(x=>x.id > sonMesajId).forEach(m=>{
-    const div = document.createElement("div");
-    div.className="mesaj";
-    div.innerHTML = `<b>${m.isim}:</b> ${m.tur==="image"? `<img src='${m.mesaj}'>`: m.mesaj }`;
-
+  const { data } = await client.from("mesajlar").select("*").order("id",{ascending:true});
+  const chatDiv=document.getElementById("chat");
+  data.filter(x=>x.id>sonMesajId).forEach(m=>{
+    const div=document.createElement("div"); div.className="mesaj";
+    div.innerHTML=`<b>${m.isim}:</b> ${m.tur==="image"? `<img src='${m.mesaj}'>`: m.mesaj}`;
     if(m.isim===isim && m.sifre===sifre){
-      const btn=document.createElement("button");
-      btn.className="silBtn"; btn.textContent="❌";
-      btn.onclick = () => {
-        supabase.from("mesajlar").delete().eq("id",m.id);
-        div.remove();
-      };
+      const btn=document.createElement("button"); btn.className="silBtn"; btn.textContent="❌";
+      btn.onclick=()=>{ client.from("mesajlar").delete().eq("id",m.id); div.remove(); };
       div.appendChild(btn);
     }
     chatDiv.appendChild(div);
-    sonMesajId = m.id;
+    sonMesajId=m.id;
   });
-  chatDiv.scrollTop = chatDiv.scrollHeight;
+  chatDiv.scrollTop=chatDiv.scrollHeight;
 }
 </script>
-
 </body>
 </html>

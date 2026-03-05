@@ -96,15 +96,20 @@ background:#ff4444;
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 
-// 🔥 BURAYA KENDİ BİLGİLERİNİ YAZ
-const SUPABASE_URL = "https://pqplrztvzamamzidyqa.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
+const SUPABASE_URL = "BURAYA_URL";
+const SUPABASE_ANON_KEY = "BURAYA_ANON_PUBLIC_KEY";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+document.addEventListener("DOMContentLoaded", async () => {
+
 let isim = prompt("Adın nedir?");
+if(!isim) isim = "Misafir";
+
 let input = document.getElementById("mesaj");
 let chat = document.getElementById("chat");
 
@@ -112,19 +117,43 @@ input.addEventListener("keypress", function(e){
 if(e.key==="Enter") gonder();
 });
 
-// 📤 MESAJ GÖNDER
 async function gonder(){
-
 let mesaj = input.value.trim();
-if(mesaj==="") return;
+if(!mesaj) return;
 
-await supabase.from("mesajlar").insert([
-{ isim: isim, mesaj: mesaj }
-]);
-
+await supabase.from("mesajlar").insert([{ isim, mesaj }]);
 input.value="";
 mesajlariYukle();
 }
+
+async function mesajlariYukle(){
+chat.innerHTML="";
+
+let { data, error } = await supabase
+.from("mesajlar")
+.select("*")
+.order("created_at",{ascending:true});
+
+if(error){
+console.log(error);
+return;
+}
+
+data.forEach(m=>{
+let div=document.createElement("div");
+div.className="mesaj";
+div.innerHTML=`<b>${m.isim}:</b> ${m.mesaj}`;
+chat.appendChild(div);
+});
+}
+
+window.gonder=gonder;
+
+mesajlariYukle();
+
+});
+
+</script>
 
 // 📥 MESAJLARI ÇEK
 async function mesajlariYukle(){
@@ -183,4 +212,5 @@ mesajlariYukle();
 
 </body>
 </html>
+
 

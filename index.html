@@ -32,7 +32,7 @@ button{padding:8px 12px;font-size:14px;border:none;border-radius:8px;cursor:poin
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// 🔹 Supabase Bağlantısı (tek tanım)
+// 🔹 Supabase bağlantısı
 const SUPABASE_URL = "https://pqplprtztvamamzidyqa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
 
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setInterval(mesajlariYukle, 2000);
 });
 
-// 🔹 Mesaj gönderme (global)
+// 🔹 Mesaj gönderme
 function gonder() {
   const mesaj = input.value.trim();
   if(!mesaj) return;
@@ -68,7 +68,7 @@ function gonder() {
     .catch(err => console.log(err));
 }
 
-// 🔹 Mesajları yükleme (global)
+// 🔹 Mesajları yükleme
 function mesajlariYukle() {
   chat.innerHTML = "";
   supabase.from("mesajlar").select("*").order("created_at",{ascending:true})
@@ -91,7 +91,7 @@ function mesajlariYukle() {
     });
 }
 
-// 🔹 Mesaj silme (global)
+// 🔹 Mesaj silme
 function sil(id) {
   supabase.from("mesajlar").delete().eq("id", id)
     .then(() => mesajlariYukle())

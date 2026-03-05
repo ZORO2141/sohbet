@@ -28,11 +28,11 @@ button{padding:8px 12px;font-size:14px;border:none;border-radius:8px;cursor:poin
 <input id="mesaj" placeholder="Mesaj yaz">
 <button class="gonderBtn" onclick="gonder()">Gönder</button>
 
-<!-- Supabase JS -->
+<!-- Tek Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// 🔹 Supabase Bağlantısı
+// 🔹 Supabase bağlantısı
 const SUPABASE_URL = "https://pqplprtztvamamzidyqa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGxwcnR6dHZhbWFtemlkeXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg5NjAsImV4cCI6MjA4ODI2NDk2MH0.FZD-uGWZsEMqvl7lOktzUAjAtULUDtw6d2Gbuewx5i8";
 
@@ -42,73 +42,55 @@ const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let isim, chat, input;
 
 document.addEventListener("DOMContentLoaded", async () => {
-
-  // Kullanıcıdan isim al
   isim = prompt("Adın nedir?") || "Misafir";
 
   chat = document.getElementById("chat");
   input = document.getElementById("mesaj");
 
-  // Enter tuşu ile mesaj gönder
   input.addEventListener("keypress", e => { if(e.key==="Enter") gonder(); });
 
-  // Mesajları yükle
   await mesajlariYukle();
 
-  // Her 2 saniyede güncelle
+  // Otomatik güncelleme
   setInterval(mesajlariYukle, 2000);
 });
 
-// 🔹 Mesaj gönder
-async function gonder(){
-  let mesaj = input.value.trim();
+// 🔹 Mesaj gönderme (global)
+function gonder() {
+  const mesaj = input.value.trim();
   if(!mesaj) return;
 
-  await supabase.from("mesajlar").insert([{ isim, mesaj }]);
-  input.value="";
-  await mesajlariYukle();
+  supabase.from("mesajlar").insert([{ isim, mesaj }]).then(() => {
+    input.value="";
+    mesajlariYukle();
+  }).catch(err => console.log(err));
 }
 
-// 🔹 Mesajları yükle
-async function mesajlariYukle(){
-  chat.innerHTML="";
+// 🔹 Mesajları yükleme (global)
+function mesajlariYukle() {
+  chat.innerHTML = "";
+  supabase.from("mesajlar").select("*").order("created_at",{ascending:true}).then(({ data, error }) => {
+    if(error){ console.log(error); return; }
 
-  let { data, error } = await supabase
-    .from("mesajlar")
-    .select("*")
-    .order("created_at",{ascending:true});
+    data.forEach(m=>{
+      const div = document.createElement("div");
+      div.className = "mesaj";
+      let html = "<b>"+m.isim+":</b> ";
+      if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)) html += "<img src='"+m.mesaj+"'>";
+      else if(m.mesaj.startsWith("http")) html += "<a href='"+m.mesaj+"' target='_blank' style='color:#4da6ff'>"+m.mesaj+"</a>";
+      else html += m.mesaj;
 
-  if(error){ console.log(error); return; }
-
-  data.forEach(m => {
-    let div = document.createElement("div");
-    div.className="mesaj";
-
-    let html = "<b>"+m.isim+":</b> ";
-
-    if(m.mesaj.match(/\.(jpg|png|gif|webp)$/i)){
-      html += "<img src='"+m.mesaj+"'>";
-    } else if(m.mesaj.startsWith("http")){
-      html += "<a href='"+m.mesaj+"' target='_blank' style='color:#4da6ff'>"+m.mesaj+"</a>";
-    } else{
-      html += m.mesaj;
-    }
-
-    if(m.isim===isim){
-      html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
-    }
-
-    div.innerHTML = html;
-    chat.appendChild(div);
+      if(m.isim === isim) html += " <button class='silBtn' onclick='sil("+m.id+")'>❌</button>";
+      div.innerHTML = html;
+      chat.appendChild(div);
+    });
+    chat.scrollTop = chat.scrollHeight;
   });
-
-  chat.scrollTop = chat.scrollHeight;
 }
 
-// 🔹 Mesaj sil
-async function sil(id){
-  await supabase.from("mesajlar").delete().eq("id", id);
-  await mesajlariYukle();
+// 🔹 Mesaj silme (global)
+function sil(id) {
+  supabase.from("mesajlar").delete().eq("id", id).then(() => mesajlariYukle()).catch(err => console.log(err));
 }
 </script>
 
